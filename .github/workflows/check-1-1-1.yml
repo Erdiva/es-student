@@ -1,20 +1,37 @@
+# Official course checks with validated JSON submission.
 name: 1.1.1 Установка инструментов
-
-on:
+'on':
   push:
     paths:
-      - 'tools.log'
-      - '.github/workflows/check-1-1-1.yml'
-  workflow_dispatch:
-
-# Пока идёт отладка, пушей подряд бывает много: в работе остаётся последний,
-# предыдущие прогоны той же проверки отменяются.
+    - tools.log
+    - .github/workflows/check-1-1-1.yml
+    - .github/scripts/send_report.py
+  workflow_dispatch: {}
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
-
 jobs:
   check:
-    uses: ant-lab-ru/es-test/.github/workflows/check-1-1-1.yml@master
-    secrets:
-      ES_ACCOUNT_SECRET: ${{ secrets.ES_ACCOUNT_SECRET }}
+    name: Установка инструментов
+    runs-on: ubuntu-latest
+    steps:
+    - name: Репозиторий обучающегося
+      uses: actions/checkout@v7
+      with:
+        path: student
+      id: checkout
+    - name: Проверки курса
+      uses: actions/checkout@v7
+      with:
+        repository: ant-lab-ru/es-test
+        path: es-test
+    - name: Проверка
+      run: es-test/checks/check-1-1-1.sh student
+      env:
+        CHECKS_JSON: ${{ runner.temp }}/report.json
+    - name: Отправка результата на платформу
+      if: ${{ always() && steps.checkout.outcome == 'success' }}
+      env:
+        ES_ACCOUNT_SECRET: ${{ secrets.ES_ACCOUNT_SECRET }}
+        REPORT: ${{ runner.temp }}/report.json
+      run: python3 student/.github/scripts/send_report.py

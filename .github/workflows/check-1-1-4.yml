@@ -1,45 +1,34 @@
+# Official course checks with validated JSON submission.
 name: 1.1.4 Создание репозитория курса
-
-# Фильтра по путям здесь нет намеренно: проверка разбирает весь список файлов
-# репозитория — ищет директорию build и результаты сборки где угодно, а не в
-# одной папке. Любой перечень путей оказался бы неполным, и проверка молча
-# не запускалась бы там, где должна. Она дешёвая: сборки в ней нет.
-on:
-  push:
-  workflow_dispatch:
-
-# Пока идёт отладка, пушей подряд бывает много: в работе остаётся последний,
-# предыдущие прогоны той же проверки отменяются.
+'on':
+  push: {}
+  workflow_dispatch: {}
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
-
 jobs:
   check:
     name: Создание репозитория курса
     runs-on: ubuntu-latest
     steps:
-      - name: Репозиторий обучающегося
-        id: checkout
-        uses: actions/checkout@v7
-        with:
-          path: student
-          fetch-depth: 0
-
-      - name: Проверки курса
-        uses: actions/checkout@v7
-        with:
-          repository: ant-lab-ru/es-test
-          path: es-test
-
-      - name: Проверка
-        run: es-test/checks/check-1-1-4.sh student "112-blink"
-        env:
-          CHECKS_JSON: ${{ runner.temp }}/report.json
-
-      - name: Отправка результата на платформу
-        if: ${{ always() && steps.checkout.outcome == 'success' }}
-        env:
-          ES_ACCOUNT_SECRET: ${{ secrets.ES_ACCOUNT_SECRET }}
-          REPORT: ${{ runner.temp }}/report.json
-        run: python3 student/.github/scripts/send_report.py
+    - name: Репозиторий обучающегося
+      uses: actions/checkout@v7
+      with:
+        path: student
+        fetch-depth: 0
+      id: checkout
+    - name: Проверки курса
+      uses: actions/checkout@v7
+      with:
+        repository: ant-lab-ru/es-test
+        path: es-test
+    - name: Проверка
+      run: es-test/checks/check-1-1-4.sh student "112-blink"
+      env:
+        CHECKS_JSON: ${{ runner.temp }}/report.json
+    - name: Отправка результата на платформу
+      if: ${{ always() && steps.checkout.outcome == 'success' }}
+      env:
+        ES_ACCOUNT_SECRET: ${{ secrets.ES_ACCOUNT_SECRET }}
+        REPORT: ${{ runner.temp }}/report.json
+      run: python3 student/.github/scripts/send_report.py
